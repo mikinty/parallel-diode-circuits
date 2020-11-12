@@ -1,0 +1,267 @@
+\documentclass{article}
+
+\include{preamble}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	We are familiar with using the Turing paradigm to create computers,
+	representing information in binary bits. However, there are more natural
+	ways to solve problems without using bits. For example, if you have a
+	graph, why not just find a natural way to represent it so the computation
+	can be done better? That's the motivation of the paper. We will explore
+	designing more natural circuit topologies to solve problems, and analyze
+	their computational complexity. We will find that for sorting, we can
+	come up with an algorithm that is faster than existing algorithms, and
+	shortest paths in graphs that we can perform asymptotically better than
+	existing algorithms. We will then explore the possibility of extending more
+	natural circuit topologies to solve other problems faster, and applications
+	of using this circuit topology technique to solve algorithmic problems in general.
+\end{abstract}
+
+
+% keywords can be removed
+\keywords{Computational Complexity \and Circuits \and Diodes \and Graphs}
+
+
+\section{Introduction}
+
+Turing machines
+
+efficient for information storage, but is it the best way to compute things? Best way to represent everything?
+
+There can be more natural ways to represent problems.
+
+\section{Definitions}
+
+\begin{definition}
+	An \textbf{ideal diode} is a circuit element that has infinite current when
+	on, and 0 current when off. The threshold voltage\footnote{we sometimes call this the ``turn-on voltage''} for when it is on and off
+	is called $\VD$ and is measured from the $+$ to the $-$ terminal.
+
+	\begin{figure}[H]
+		\centering
+		\begin{circuitikz}
+			\draw (0, 0) node[above] {$+$} to[D*]
+			(2, 0) node[above] {$-$};
+		\end{circuitikz}
+		\caption{A diode, with the positive and negative terminals marked.}
+	\end{figure}
+\end{definition}
+
+\begin{definition}
+	A \textbf{voltage source} is a circuit element that maintains a voltage of
+	$V$ between 2 nodes.
+
+	In this paper, we will be using the following element to represent a voltage source.
+	\begin{figure}[H]
+		\centering
+		\begin{circuitikz}
+			\draw (0, 0) to[american voltage source, l=$\SI{5}{\volt}$] (2, 0);
+		\end{circuitikz}
+		\caption{A voltage source}
+	\end{figure}
+\end{definition}
+
+\begin{definition}
+	An \textbf{ammeter} is a device used to measure the current at some node of a circuit.
+	We will use the notation
+	\begin{equation}
+		I(A_i)
+	\end{equation}
+	to describe the current measured by ammeter $A_i$.
+
+	\begin{figure}[H]
+		\centering
+		\begin{circuitikz}
+			\draw (0, 0) to[ammeter] (2, 0);
+		\end{circuitikz}
+		\caption{An ammeter}
+	\end{figure}
+\end{definition}
+
+\begin{definition}
+	A \textbf{switch} is a device that can be set to 2 configurations, either
+	closed, which behaves as a wire in a circuit, or open, which will behave as
+	an open circuit, so no current can flow through.
+	\begin{figure}[H]
+		\centering
+		\begin{circuitikz}
+			\draw (0, 0) to[nos] (2, 0);
+		\end{circuitikz}
+		\caption{An open switch}
+	\end{figure}
+\end{definition}
+
+\section{Circuit Topologies}
+Here, we will explore two circuit topologies, their computational complexity in the problem they solve, and their costs.
+\begin{itemize}
+	\item Sorting numbers
+	\item Shortest path in a graph
+\end{itemize}
+
+
+\subsection{Sorting}
+We define the sorting problem to be
+
+Given a list of $n$ numbers,
+
+The fastest algorithms for sorting numbers are
+
+\begin{itemize}
+	\item \textbf{QuickSort:} $O(n \log n)$
+	\item \textbf{Radix Sort:} $O(b(n+k))$
+\end{itemize}
+
+\subsubsection{Circuit}
+\begin{figure}[H]
+	\centering
+	\def\labelIndex{{1, 2, 3, n, 5}}
+	\def\yValues{{5, 3, 1, -3, -5}}
+	\begin{circuitikz}
+		\draw (0, 0) to[american voltage source, l_=$V$]
+			(0, -2) node[sground] {};
+		\draw (0, 0) to[short] (2, 0)
+			(2, 5) to[short] (2, -5)
+			(6.5, 5) to[short] (6.5, -5)
+			(6.5, 0) to[short] (7, 0) node[sground, rotate=90] {}
+		;
+
+		% Diodes
+		\foreach \y/\i in {5/1, 3/2, 1/3, -3/n-1, -5/n}
+			\draw (2, \y) to[nos, l=$S_{\i}$]
+				(3.5, \y) to[ammeter, l=$A_{\i}$]
+				(5, \y) to[D*, l=$D_{\i}$] (6.5, \y)
+			;
+
+		\draw (4.25, -1) node[] {$\cdots$};
+	\end{circuitikz}
+	\caption{Circuit for sorting numbers}
+	\label{fig:circuit_sorting}
+\end{figure}
+
+
+\subsubsection{Algorithm}
+
+\begin{lstlisting}[label={alg:sort}]
+	SORT:
+		// Build circuit
+		Get a voltage source $V$, with nodes $A$ at the positive, $B$ at the negative
+		for $i = 1:n$:
+			Build a series circuit of a switch $S_i$, ammeter $A_i$, and diode $D_i$
+			and put it between $A, B$
+
+		// Sort
+		queue Q = []
+		for $n$ iterations:
+			set $V = \Vmax$
+
+			for $i$ such that $I(A_i) > 0$:
+				turn off $S_i$
+				Q.push(V_i)
+
+		return Q
+\end{lstlisting}
+
+We will now prove this algorithm is correct and runs in $O(n)$ time.
+
+First, we will prove the following lemma,
+
+\begin{lemma}
+	If there are diodes $D_1, D_2, \dots, D_n$ in parallel, and a voltage of $V
+	> \max(V_{D_1}, V_{D_2}, \dots, V_{D_n})$ is applied across these diodes,
+	the voltage across the diodes is $V_{D_i} = \min(V_{D_1}, V_{D_2}, \dots, V_{D_n})$,
+	and only $D_i$ is on.
+\end{lemma}
+
+\begin{proof}
+	We will prove this statement by contradiction.
+
+	Suppose some other $D_k$ where $k \neq i$ is on, then the voltage across the diodes is
+	$V_{D_k}$. But since we know that $V_{D_k} \geq V_{D_i}$, it must be the case that $D_i$
+	is also on. However, if $D_i$ is on, then the voltage across the diodes is $V_{D_i} < V_{D_k}$,
+	and therefore $D_k$ cannot be on. We have reached a contradiction, and therefore only $V_{D_i}$
+	can be one.
+\end{proof}
+
+Now, the proof is simple,
+
+\begin{theorem}
+	Algorithm \ref{alg:sort} correctly sorts diodes $D_1, D_2, \dots, D_n$ from
+	smallest to greatest threshold voltage $V_{D_i}$.
+\end{theorem}
+\begin{proof}
+	Once we have built our circuit, for each of $n$ iterations, we are only
+	detecting the $D_i$ with the smallest $V_{D_i}$ that turns on, and by
+	turning the switch $S_i$ off, in the next iteration, the smallest $D_k$ of
+	the remaining diodes will be selected next.
+
+	Therefore, since we originally pick the smallest $D_i$, then the second smallest $D_k$, and so on,
+	we will return the diodes in increasing order.
+\end{proof}
+
+\subsubsection{Complexity}
+
+\begin{theorem}
+	Algorithm \ref{alg:sort} runs in $O(n)$ time.
+\end{theorem}
+
+\begin{proof}
+	Building the circuit takes 1 operation for putting the voltage source, and $3n$ operations for
+	attaching the switch, ammeter, and diode in parallel.
+
+	Then, to run the algorithm, we are just turning off $S_i$ one by one, $n$
+	times, and each time adding $V_{D_i}$ to our queue, which is a total of 2
+	operations.
+
+	Therefore, the total number of operations is
+	\begin{equation}
+		1 + 3n + 2n = 5n+1 \in O(n).
+	\end{equation}
+\end{proof}
+
+Notice that although the complexity is $O(n)$, which matches radix sort,
+the constant $kn \in O(n)$ is for a $k \approx 2$, which outperforms radix sort.
+
+\subsection{Shortest Path}
+A natural extension to the sorting circuit is to create graphs out of diodes,
+and then look for shortest paths.
+
+\subsubsection{Circuit}
+
+\subsubsection{Algorithm}
+
+First, we need to prove the following
+
+\begin{lemma}
+For a chain of diodes $D_1, D_2, \dots, D_n$, the turn on voltage for the
+chain is
+\begin{equation}
+	V_D = \sum_{i=1}^n V_{D_i}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+
+\end{proof}
+
+\section{Real-Life Implementations of Circuits}
+
+To demonstrate that these ideas can work in practice, I built these circuits
+in real life and tested them out.
+
+\section{Discussion}
+
+How do we get diodes of arbitrary threshold voltage?
+This is unlikely, and can vastly limit the scopes of the problems we'd like to solve.
+
+Physical limitations with electrons traveling through a wire.
+
+What other problems can we solve with this idea?
+
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
