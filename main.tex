@@ -50,6 +50,31 @@ There can be more natural ways to represent problems.
 	\end{figure}
 \end{definition}
 
+\begin{property}
+	For a chain of diodes $D_1, D_2, \dots, D_n$ in series, the turn on voltage for the
+	chain is
+	\begin{equation}
+		V_D = \sum_{i=1}^n V_{D_i}
+	\end{equation}
+	\begin{figure}[H]
+		\centering
+		\begin{circuitikz}
+			\draw (0, 0)  to[D*, l=$D_1$]
+				(2, 0) to[D*, l=$D_2$]
+				(4, 0)
+				(4.5, 0) node[] {$\cdots$}
+				(5, 0) to[D*, l=$D_n$] (7,0)
+			;
+
+			\draw[decoration={brace,mirror},decorate]
+				(7,1) -- node[above=6pt] {$\sum V_{D_i}$} (0,1)
+			;
+		\end{circuitikz}
+		\caption{Diode chain}
+	\end{figure}
+	\label{property:diode_series}
+\end{property}
+
 \begin{definition}
 	A \textbf{voltage source} is a circuit element that maintains a voltage of
 	$V$ between 2 nodes.
@@ -154,9 +179,8 @@ The fastest algorithms for sorting numbers are
 
 		// Sort
 		queue Q = []
-		for $n$ iterations:
-			set $V = \Vmax$
-
+		set $V = \Vmax$
+		while $\exists S_i$ that is on:
 			for $i$ such that $I(A_i) > 0$:
 				turn off $S_i$
 				Q.push(V_i)
@@ -170,35 +194,49 @@ First, we will prove the following lemma,
 
 \begin{lemma}
 	If there are diodes $D_1, D_2, \dots, D_n$ in parallel, and a voltage of $V
-	> \max(V_{D_1}, V_{D_2}, \dots, V_{D_n})$ is applied across these diodes,
-	the voltage across the diodes is $V_{D_i} = \min(V_{D_1}, V_{D_2}, \dots, V_{D_n})$,
-	and only $D_i$ is on.
+	\geq \max(V_{D_1}, V_{D_2}, \dots, V_{D_n})$ is applied across these diodes,
+	the voltage across the diodes is $\Vmin = \min(V_{D_1}, V_{D_2}, \dots, V_{D_n})$,
+	and only diodes $D_i$ such that $V_{D_i} = \Vmin$ are on.
 \end{lemma}
 
 \begin{proof}
 	We will prove this statement by contradiction.
 
-	Suppose some other $D_k$ where $k \neq i$ is on, then the voltage across the diodes is
-	$V_{D_k}$. But since we know that $V_{D_k} \geq V_{D_i}$, it must be the case that $D_i$
-	is also on. However, if $D_i$ is on, then the voltage across the diodes is $V_{D_i} < V_{D_k}$,
-	and therefore $D_k$ cannot be on. We have reached a contradiction, and therefore only $V_{D_i}$
-	can be one.
+	Suppose some other $D_k$ where $V_{D_k} > \Vmin$ is on. Then the voltage
+	across the diodes is $V_{D_k}$. But since we know that $V_{D_k} >
+	\Vmin$, it must be the case that some $D_i$ with $V_{D_i} = \Vmin$ is also
+	on. However, if $D_i$ is on, then the voltage across the diodes is $V_{D_i}
+	< V_{D_k}$, and therefore $D_k$ cannot be on. We have reached a
+	contradiction, and therefore only diodes $D_I$ with $V_{D_i} = \Vmin$ can
+	be on.
+	\label{lemma:smallest_diode}
 \end{proof}
 
-Now, the proof is simple,
+Now, the proof for the sorting algorithm is simple,
 
 \begin{theorem}
 	Algorithm \ref{alg:sort} correctly sorts diodes $D_1, D_2, \dots, D_n$ from
 	smallest to greatest threshold voltage $V_{D_i}$.
 \end{theorem}
 \begin{proof}
-	Once we have built our circuit, for each of $n$ iterations, we are only
-	detecting the $D_i$ with the smallest $V_{D_i}$ that turns on, and by
-	turning the switch $S_i$ off, in the next iteration, the smallest $D_k$ of
-	the remaining diodes will be selected next.
+	Once we have built our circuit, since $V = \Vmax$, we know at least one
+	diode is turned on, as long as $\exists S_i$ that is on.
+	For the diodes that are on, or have $I(A_i) > 0$, they will only be the
+	diodes that are on, and these diodes, by Lemma \ref{lemma:smallest_diode},
+	are the ones with the smallest threshold voltage in the set of diodes.
 
-	Therefore, since we originally pick the smallest $D_i$, then the second smallest $D_k$, and so on,
-	we will return the diodes in increasing order.
+	Now, we can show this sorting algorithm works.
+
+	\begin{itemize}
+		\item Initially, the queue $Q$ is empty, so it is trivially sorted
+		\item On an arbitrary iteration with $Q$ sorted, we only add diodes
+		with $V_{D_i}$ the smallest in the set of remaining diodes with their switch on.
+		When we add these diodes to the queue, $V_{D_i}$ must be larger than the
+		previous diode $V_{D_j}$ added, since when $D_j$ was added, $D_i$ was not on.
+		Therefore, $Q$ remains sorted in each iteration.
+		\item On the last iteration, we are left with diodes that have a larger threshold voltage than all diodes currently in $Q$,
+		so adding these last diodes to $Q$ still keeps $Q$ sorted.
+	\end{itemize}
 \end{proof}
 
 \subsubsection{Complexity}
@@ -232,14 +270,10 @@ and then look for shortest paths.
 
 \subsubsection{Algorithm}
 
-First, we need to prove the following
+Before we prove the correctness of our algorithm,
+we will show the following to make the proof easier to understand.
 
 \begin{lemma}
-For a chain of diodes $D_1, D_2, \dots, D_n$, the turn on voltage for the
-chain is
-\begin{equation}
-	V_D = \sum_{i=1}^n V_{D_i}
-\end{equation}
 \end{lemma}
 
 \begin{proof}

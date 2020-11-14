@@ -17,6 +17,7 @@
 \RequirePackage{siunitx} % nice units formatting
 \RequirePackage{subfig}
 \RequirePackage{tikz}
+\usetikzlibrary{decorations.pathreplacing,angles,quotes}
 \RequirePackage{verbatim}
 
 \graphicspath{{images/}}
@@ -25,6 +26,7 @@
 \newtheorem{theorem}{Theorem}
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}
+\newtheorem{property}{Property}
 \newtheorem{algorithm}{Algorithm}
 \newtheorem{lemma}{Lemma}
 \newtheorem{corollary}{Corollary}
@@ -128,6 +130,7 @@
 \newcommand{\ISC}{I_\text{SC}}
 
 \newcommand{\Vmax}{V_\text{max}}
+\newcommand{\Vmin}{V_\text{min}}
 
 % SIUNITX
 \sisetup{quotient-mode=fraction} % Output a/b as \frac{a}{b}
