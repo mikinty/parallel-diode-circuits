@@ -1,0 +1,316 @@
+\section{Circuit Topologies}
+Here, we will explore two circuit topologies, their computational complexity in the problem they solve, and their costs.
+
+\subsection{Sorting}
+\begin{definition}
+  The sorting problem is when we are given a list of $n$ numbers, and we need to output the numbers in increasing order.
+\end{definition}
+
+The fastest algorithms for sorting numbers are
+
+\begin{itemize}
+  \item \textbf{QuickSort:} $O(n \log n)$, used in practice because of quickness and optimization (\cite{quicksort}).
+  \item \textbf{Radix Sort:} $O(b(n+k))$, despite linear efficiency, requires fixed size keys and a way of breaking down keys like it does for numbers. Therefore not used in practice as much (\cite{radix_sort}).
+\end{itemize}
+
+We will present a circuit that allows us to sort $n$ numbers in $O(n)$ time and has $O(n)$ space complexity.
+We will see later that we have some of the limitations of radix sort, namely that we are constraining ourselves to numbers, but we have a more general solution because the algorithm doesn't use any other assumptions.
+
+\subsubsection{Circuit}
+
+Given an array with numbers
+\begin{equation*}
+  \pbra{
+    x_1, x_2, x_3, \dots, x_n
+  },
+\end{equation*}
+Get diodes $D_i$ of turn-on voltage $V_{D_i} = x_i$, and construct the following circuit:
+
+\begin{figure}[H]
+  \centering
+  \def\labelIndex{{1, 2, 3, n, 5}}
+  \def\yValues{{5, 3, 1, -3, -5}}
+  \begin{circuitikz}
+    % Voltage source and ground
+    \draw (0, 0) node[above] {$A$} to[american voltage source, l_=$V$]
+    (0, -2) node[sground] {};
+    \draw (0, 0) to[short] (2, 0)
+    (2, 5) to[short] (2, -5)
+    (6.5, 5) to[short] (6.5, -5)
+    (6.5, 0) to[short] (7, 0) node[sground, rotate=90] {};
+    \draw (7, 0) node[above] {$B$};
+
+    % Diodes
+    \foreach \y/\i in {5/1, 3/2, 1/3, -3/n-1, -5/n}
+    \draw (2, \y) to[ncs, l=$S_{\i}$]
+    (3.5, \y) to[ammeter, l=$A_{\i}$]
+    (5, \y) to[D*, l=$D_{\i}$] (6.5, \y)
+    ;
+
+    \draw (4.25, -1) node[] {$\cdots$};
+  \end{circuitikz}
+  \caption{Circuit for sorting numbers}
+  \label{fig:circuit_sorting}
+\end{figure}
+
+
+\subsubsection{Algorithm}
+
+\begin{lstlisting}[label={alg:sort}]
+	SORT:
+		// Build circuit
+		Get a voltage source $V$, with nodes $A$ at the positive, $B$ at the negative
+		for $i = 1:n$:
+			Build a series circuit starting at $A$, with a switch $S_i$ closed, ammeter $A_i$, and diode $D_i$
+			and ending at $B$
+
+		// Sort
+		queue Q = []
+		set $V = \Vmax$
+		while $\exists S_i$ that is on:
+			for $i$ such that $I(A_i) > 0$:
+				open $S_i$
+				Q.push($V_i$)
+
+		return Q
+\end{lstlisting}
+
+We will now prove this algorithm is correct and then prove its time and space complexity.
+
+First, we will prove the following lemma regarding a property we will call ``superparallel comparison'',
+
+\begin{lemma}
+  If there are diodes $D_1, D_2, \dots, D_n$ in parallel, and a voltage of $V
+    \geq \max(V_{D_1}, V_{D_2}, \dots, V_{D_n})$ is applied across these diodes,
+  the voltage across the diodes is $\Vmin = \min(V_{D_1}, V_{D_2}, \dots, V_{D_n})$,
+  and only diodes $D_i$ such that $V_{D_i} = \Vmin$ are on.
+\end{lemma}
+
+\begin{proof}
+  We will prove this statement by contradiction.
+
+  Suppose some other $D_k$ where $V_{D_k} > \Vmin$ is on. Then the voltage
+  across the diodes is $V_{D_k}$. But since we know that $V_{D_k} >
+    \Vmin$, it must be the case that some $D_i$ with $V_{D_i} = \Vmin$ is also
+  on. However, if $D_i$ is on, then the voltage across the diodes is $V_{D_i}
+    < V_{D_k}$, and therefore $D_k$ cannot be on. We have reached a
+  contradiction, and therefore only diodes $D_I$ with $V_{D_i} = \Vmin$ can
+  be on.
+  \label{lemma:smallest_diode}
+\end{proof}
+
+Now, the proof for the sorting algorithm is simple,
+
+\begin{theorem}
+  Algorithm \ref{alg:sort} correctly sorts diodes $D_1, D_2, \dots, D_n$ from
+  smallest to greatest threshold voltage $V_{D_i}$.
+\end{theorem}
+\begin{proof}
+  Once we have built our circuit, since $V = \Vmax$, we know at least one
+  diode is turned on, as long as $\exists S_i$ that is on.
+  For the diodes that are on, or have $I(A_i) > 0$, they will only be the
+  diodes that are on, and these diodes, by Lemma \ref{lemma:smallest_diode},
+  are the ones with the smallest threshold voltage in the set of diodes.
+
+  Now, we can show this sorting algorithm works by induction.
+
+  \begin{itemize}
+    \item Initially, the queue $Q$ is empty, so it is trivially sorted
+    \item On an arbitrary iteration with $Q$ sorted, we only add diodes
+          with $V_{D_i}$ the smallest in the set of remaining diodes with their switch on.
+          When we add these diodes to the queue, $V_{D_i}$ must be larger than the
+          previous diode $V_{D_j}$ added, since when $D_j$ was added, $D_i$ was not on.
+          Therefore, $Q$ remains sorted in each iteration.
+  \end{itemize}
+
+  This algorithm will terminate, since every iteration takes at least one diode from the set of diodes that have their switch $S_i$ on, and pushes that voltage into the queue.
+\end{proof}
+
+\subsubsection{Complexity}
+
+\begin{theorem}
+  Algorithm \ref{alg:sort} runs in $O(n)$ time and uses $O(n)$ space.
+\end{theorem}
+
+\begin{proof}
+  Building the circuit takes 1 operation for putting the voltage source, and $3n$ operations for
+  attaching the switch, ammeter, and diode in parallel.
+
+  This circuit contains
+  \begin{equation}
+    1 + 3n  = 3n + 1 \in O(n)
+  \end{equation}
+  components, so it is $O(n)$ space.
+
+  Then, to run the algorithm, we are just turning off $S_i$ one by one, $n$
+  times, and each time adding $V_{D_i}$ to our queue, which is a total of 2
+  operations.
+
+  Therefore, the total number of operations is
+  \begin{equation}
+    1 + 3n + 2n = 5n+1 \in O(n).
+  \end{equation}
+\end{proof}
+
+Notice that although the complexity is $O(n)$, which matches radix sort,
+the constant $kn \in O(n)$ is for a $k \approx 2$, which outperforms radix sort.
+
+\subsection{Shortest Path in Graphs}
+A natural extension to the sorting circuit is to create graphs out of diodes,
+and then look for shortest paths.
+
+\begin{definition}
+  The shortest path problem on a weighted, directed graph is given a graph $G$, we want to find the shortest path from $V_i$ to $V_j$, for any two vertices $V_i, V_j \in G$.
+\end{definition}
+
+Finding the shortest path between every pair of vertices can be solved with the Floyd-Warshall algorithm in $O(\abs{V}^3)$ time, with $O(\abs{V}^2)$ space complexity (\cite{floyd_algorithm}).
+
+We will present a circuit and corresponding algorithm that runs in $O(\abs{V}^2)$ time and
+uses $O(\abs{V} + \abs{E})$ space complexity.
+
+\subsubsection{Circuit}
+
+To construct the circuit, given a graph $G=(V, E)$,
+
+\begin{lstlisting}
+	BUILD_DIODE_GRAPH($G=(V, E)$):
+		Normalize $G$ so that there are no negative weights, producing $G'=(V, E')$
+
+		For $e_i = (V_j, V_k, w_i) \in E'$:
+			Add $A_i, D_i$ between $V_j$, $V_k$ such that $V_{D_i} = w_i$
+\end{lstlisting}
+
+For example, with the following graph, we can construct the corresponding diode graph as follows:
+\begin{figure}[H]
+  \centering
+  \def\scaleGraph{1.75}
+  \subfloat[Original graph]{
+    \begin{tikzpicture}
+      \node[draw, circle] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
+      \node[draw, circle] (v2) at (0, 0) {$V_2$};
+      \node[draw, circle] (v3) at (2*\scaleGraph, 0) {$V_3$};
+      \node[draw, circle] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
+      \draw (v1) edge[-Latex] node[above] {$-2$} (v3);
+      \draw (v2) edge[-Latex] node[above] {$4$} (v1);
+      \draw (v2) edge[-Latex] node[above] {$3$} (v3);
+      \draw (v3) edge[-Latex] node[above] {$2$} (v4);
+      \draw (v4) edge[-Latex] node[above] {$-1$} (v2);
+    \end{tikzpicture}
+  }\hfill
+  \subfloat[Normalized graph]{
+    \begin{tikzpicture}
+      \node[draw, circle] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
+      \node[draw, circle] (v2) at (0, 0) {$V_2$};
+      \node[draw, circle] (v3) at (2*\scaleGraph, 0) {$V_3$};
+      \node[draw, circle] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
+      \draw (v1) edge[-Latex] node[above] {$0$} (v3);
+      \draw (v2) edge[-Latex] node[above] {$6$} (v1);
+      \draw (v2) edge[-Latex] node[above] {$5$} (v3);
+      \draw (v3) edge[-Latex] node[above] {$4$} (v4);
+      \draw (v4) edge[-Latex] node[above] {$1$} (v2);
+    \end{tikzpicture}
+  }\hfill
+  \subfloat[Diode graph, ammeters $A_i$ are in series with $D_i$, but not shown to reduce clutter in the diagram]{
+    \begin{circuitikz}
+      \draw (v1) to[short] (v3);
+      \draw (v2) to[D*, l={$V_{D_1} \eq 6$}] (v1);
+      \draw (v2) to[D*, l={$V_{D_2} \eq 5$}] (v3);
+      \draw (v3) to[D*, l={$V_{D_3} \eq 4$}] (v4);
+      \draw (v4) to[D*, l={$V_{D_4} \eq 1$}] (v2);
+      \node[fill=white] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
+      \node[fill=white] (v2) at (0, 0) {$V_2$};
+      \node[fill=white] (v3) at (2*\scaleGraph, 0) {$V_3$};
+      \node[fill=white] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
+    \end{circuitikz}
+  }
+\end{figure}
+
+\subsubsection{Algorithm}
+
+\begin{lstlisting}[label={alg:shortest_paths}]
+	SHORTEST_PATH_ALL_PAIRS(G):
+		BUILD_DIODE_GRAPH(G)
+
+		shortest_paths = {}
+		Set $V = \sum V_{D_k}$
+		For every pair of vertices $V_i, V_j$:
+			Put voltage source $V$ with the positive terminal at $V_i$ and negative terminal at $V_j$
+			The $I(A_k) > 0$ are the edges $e_k$ that are in the shortest path
+			Add this path to shortest_paths(i, j)
+\end{lstlisting}
+
+\begin{theorem}
+  Algorithm \ref{alg:shortest_paths} correctly finds the shortest path between every $V_i, V_j$.
+\end{theorem}
+\begin{proof}
+  There are a set of paths $P_k$ between $V_i, V_j$, in the form
+  \begin{equation}
+    P_k = \pbra{
+      D_{k_1}, D_{k_2}, \dots, D_{k_{n_k}}
+    }.
+    \label{eq:diode_paths}
+  \end{equation}
+  Using Property \ref{property:diode_series}, when diodes are in series,
+  their turn on voltage is just the sum of all of the diodes' turn on
+  voltages. So we can express the turn-on voltages for all of these $P_k$ paths as
+  \begin{equation}
+    V_{\text{turn on}_k} = \sum_{i=1}^{n_k} V_{D_{k_i}}
+  \end{equation}
+
+  Now, when we apply $\Vmax$ across $V_i, V_j$, the diode series with the
+  lowest turn-on voltage will turn on. Since diode turn on voltages
+  correspond to the edge lengths on the graph, the smallest turn-on voltage
+  path corresponds to the shortest path.
+
+  If there is no such diode series that turns on, then there is no path between $V_i, V_j$.
+
+  Therefore, in every iteration we are finding the shortest path between $V_i, V_j$.
+\end{proof}
+
+\subsubsection{Complexity}
+\begin{theorem}
+  Algorithm \ref{alg:shortest_paths} runs in $O(\abs{V}^2)$ time and uses $O(\abs{V} + \abs{E})$ space complexity.
+\end{theorem}
+\begin{proof}
+  We can find the time and space complexity of the algorithm by considering
+  the construction and the path searching.
+
+  \textbf{Construction.} To normalize the weights of $G$, we just have to add
+  the minimum edge weight in $G$ to all of the edges, which takes $\abs{E}$
+  operations.
+
+  Then, to build the graph, we have to connect
+  \begin{itemize}
+    \item $\abs{E}$ diodes
+    \item $\abs{E}$ ammeters
+    \item $\abs{E}$ wires from the ammeter to the device running the algorithm
+    \item $\abs{V}$ junctions
+  \end{itemize}
+
+  Therefore, construction takes
+  \begin{equation}
+    \abs{E} + 3\abs{E} + \abs{V} \in O(\abs{V} + \abs{E})
+    \label{eq:construction_complexity}
+  \end{equation}
+  time and space complexity.
+
+  \textbf{Path search.} Once we have our graph, in order to find all shortest
+  paths, all we have to do is apply $\Vmax$ across every node pair $V_i,
+    V_j$. Every application of this max voltage will instantly reveal the
+  shortest path, i.e. $O(1)$ path search. To find every shortest path, we
+  just have to apply this max voltage $\abs{V} \cdot (\abs{V}-1)$ times,
+  corresponding to the number of $V_i, V_j$ pairs where order matters, but $i
+    \neq j$.
+
+  This will take
+  \begin{equation}
+    \abs{V}(\abs{V} - 1) \in O(\abs{V}^2)
+    \label{eq:search_complexity}
+  \end{equation}
+  time.
+
+  Therefore, combining Equations (\ref{eq:construction_complexity},
+  \ref{eq:search_complexity}), we see that Algorithm \ref{alg:shortest_paths}
+  runs in $O(\abs{V}^2)$ time and uses $O(\abs{V} + \abs{E})$ space
+  complexity.
+\end{proof}

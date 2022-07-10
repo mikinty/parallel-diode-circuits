@@ -1,469 +1,87 @@
 \documentclass{article}
 
-\include{preamble}
+\input{preamble}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-	We are familiar with using the Turing paradigm to create computers,
-	representing information in binary bits. However, there are more natural
-	ways to solve problems without using bits. For example, if you have a
-	graph, why not just find a natural way to represent it so the computation
-	can be done better? That's the motivation of the paper. We will explore
-	designing more natural circuit topologies to solve problems, and analyze
-	their computational complexity. We will find that for sorting, we can
-	come up with an algorithm that is faster than existing algorithms, and
-	shortest paths in graphs that we can perform asymptotically better than
-	existing algorithms. We will then explore the possibility of extending more
-	natural circuit topologies to solve other problems faster, and applications
-	of using this circuit topology technique to solve algorithmic problems in general.
+  We present a set of solutions to sorting numbers and finding all shortest paths in a directed, weighted graph, by using diodes, instead of traditional Turing computational model methods.
+  We see that the solutions are able to produce good time complexity results,
+  derive a solution for $O(n)$ time and space for sorting $n$ numbers and $O(\abs{V}^2)$ time and $O(\abs{V} + \abs{E})$ space for finding the shortest path between all pairs of vertices in a graph.
+  However, the cost of producing diodes with large weights is potentially an exponentially expensive resource relative to input sizes, which may lend to why we are able to solve problems so quickly.
 \end{abstract}
 
 
 % keywords can be removed
-\keywords{Computational Complexity \and Circuits \and Diodes \and Graphs}
+\keywords{
+  Computational Complexity \and Circuits \and Diodes \and Graphs \and
+  Sorting \and Shortest Path
+}
 
 
 \section{Introduction}
 
-Turing machines
+Most computer science algorithms rely on the Turing Machine model of computation (\cite{turing1936computable}), where we encode information with bits, and we can read or write information in some sort of memory.
+For practical purposes, we use Von Neumann architectures for computers (\cite{von_nuemann_architecture}), which use instruction sets to tell CPUs how to manipulate data in order to solve problems.
+While these methods have proven empirically to be able to solve a vast variety of problems relatively efficiently, there is a question of ``are current computation methods the fastest way to represent and solve our problem?''
 
-efficient for information storage, but is it the best way to compute things? Best way to represent everything?
+The idea for this paper is that we present a more naturally-motivated way to represent problems, in our case sorting and shortest path, with diodes, and see how we can solve them more quickly than with traditional Turing Machine style computation.
 
-There can be more natural ways to represent problems.
-
-\section{Definitions}
-
-\begin{definition}
-	An \textbf{ideal diode} is a circuit element that has infinite current when
-	on, and 0 current when off. The threshold voltage\footnote{we sometimes call this the ``turn-on voltage''} for when it is on and off
-	is called $\VD$ and is measured from the $+$ to the $-$ terminal.
-
-	\begin{figure}[H]
-		\centering
-		\begin{circuitikz}
-			\draw (0, 0) node[above] {$+$} to[D*]
-			(2, 0) node[above] {$-$};
-		\end{circuitikz}
-		\caption{A diode, with the positive and negative terminals marked.}
-	\end{figure}
-\end{definition}
-
-\begin{property}
-	For a chain of diodes $D_1, D_2, \dots, D_n$ in series, the turn on voltage for the
-	chain is
-	\begin{equation}
-		V_D = \sum_{i=1}^n V_{D_i}
-	\end{equation}
-	\begin{figure}[H]
-		\centering
-		\begin{circuitikz}
-			\draw (0, 0)  to[D*, l=$D_1$]
-				(2, 0) to[D*, l=$D_2$]
-				(4, 0)
-				(4.5, 0) node[] {$\cdots$}
-				(5, 0) to[D*, l=$D_n$] (7,0)
-			;
-
-			\draw[decoration={brace,mirror},decorate]
-				(7,1) -- node[above=6pt] {$\sum V_{D_i}$} (0,1)
-			;
-		\end{circuitikz}
-		\caption{Diode chain}
-	\end{figure}
-	\label{property:diode_series}
-\end{property}
-
-\begin{definition}
-	A \textbf{voltage source} is a circuit element that maintains a voltage of
-	$V$ between 2 nodes.
-
-	In this paper, we will be using the following element to represent a voltage source.
-	\begin{figure}[H]
-		\centering
-		\begin{circuitikz}
-			\draw (0, 0) to[american voltage source, l=$\SI{5}{\volt}$] (2, 0);
-		\end{circuitikz}
-		\caption{A voltage source}
-	\end{figure}
-\end{definition}
-
-\begin{definition}
-	An \textbf{ammeter} is a device used to measure the current at some node of a circuit.
-	We will use the notation
-	\begin{equation}
-		I(A_i)
-	\end{equation}
-	to describe the current measured by ammeter $A_i$.
-
-	\begin{figure}[H]
-		\centering
-		\begin{circuitikz}
-			\draw (0, 0) to[ammeter] (2, 0);
-		\end{circuitikz}
-		\caption{An ammeter}
-	\end{figure}
-\end{definition}
-
-\begin{definition}
-	A \textbf{switch} is a device that can be set to 2 configurations, either
-	closed, which behaves as a wire in a circuit, or open, which will behave as
-	an open circuit, so no current can flow through.
-	\begin{figure}[H]
-		\centering
-		\begin{circuitikz}
-			\draw (0, 0) to[nos] (2, 0);
-		\end{circuitikz}
-		\caption{An open switch}
-	\end{figure}
-\end{definition}
-
-\section{Circuit Topologies}
-Here, we will explore two circuit topologies, their computational complexity in the problem they solve, and their costs.
-\begin{itemize}
-	\item Sorting numbers
-	\item Shortest path in a graph
-\end{itemize}
-
-
-\subsection{Sorting}
-We define the sorting problem to be
-
-Given a list of $n$ numbers,
-
-The fastest algorithms for sorting numbers are
-
-\begin{itemize}
-	\item \textbf{QuickSort:} $O(n \log n)$
-	\item \textbf{Radix Sort:} $O(b(n+k))$
-\end{itemize}
-
-We will present a circuit that runs in $O(n)$ time and has $O(n)$ space complexity.
-
-\subsubsection{Circuit}
-
-Given an array with numbers
-\begin{equation*}
-	\pbra{
-		x_1, x_2, x_3, \dots, x_n
-	},
-\end{equation*}
-Get diodes $D_i$ of turn-on voltage $V_{D_i} = x_i$, and construct the following circuit:
-
-\begin{figure}[H]
-	\centering
-	\def\labelIndex{{1, 2, 3, n, 5}}
-	\def\yValues{{5, 3, 1, -3, -5}}
-	\begin{circuitikz}
-		\draw (0, 0) to[american voltage source, l_=$V$]
-			(0, -2) node[sground] {};
-		\draw (0, 0) to[short] (2, 0)
-			(2, 5) to[short] (2, -5)
-			(6.5, 5) to[short] (6.5, -5)
-			(6.5, 0) to[short] (7, 0) node[sground, rotate=90] {}
-		;
-
-		% Diodes
-		\foreach \y/\i in {5/1, 3/2, 1/3, -3/n-1, -5/n}
-			\draw (2, \y) to[nos, l=$S_{\i}$]
-				(3.5, \y) to[ammeter, l=$A_{\i}$]
-				(5, \y) to[D*, l=$D_{\i}$] (6.5, \y)
-			;
-
-		\draw (4.25, -1) node[] {$\cdots$};
-	\end{circuitikz}
-	\caption{Circuit for sorting numbers}
-	\label{fig:circuit_sorting}
-\end{figure}
-
-
-\subsubsection{Algorithm}
-
-\begin{lstlisting}[label={alg:sort}]
-	SORT:
-		// Build circuit
-		Get a voltage source $V$, with nodes $A$ at the positive, $B$ at the negative
-		for $i = 1:n$:
-			Build a series circuit of a switch $S_i$, ammeter $A_i$, and diode $D_i$
-			and put it between $A, B$
-
-		// Sort
-		queue Q = []
-		set $V = \Vmax$
-		while $\exists S_i$ that is on:
-			for $i$ such that $I(A_i) > 0$:
-				turn off $S_i$
-				Q.push(V_i)
-
-		return Q
-\end{lstlisting}
-
-We will now prove this algorithm is correct and then prove its time and space complexity.
-
-First, we will prove the following lemma,
-
-\begin{lemma}
-	If there are diodes $D_1, D_2, \dots, D_n$ in parallel, and a voltage of $V
-	\geq \max(V_{D_1}, V_{D_2}, \dots, V_{D_n})$ is applied across these diodes,
-	the voltage across the diodes is $\Vmin = \min(V_{D_1}, V_{D_2}, \dots, V_{D_n})$,
-	and only diodes $D_i$ such that $V_{D_i} = \Vmin$ are on.
-\end{lemma}
-
-\begin{proof}
-	We will prove this statement by contradiction.
-
-	Suppose some other $D_k$ where $V_{D_k} > \Vmin$ is on. Then the voltage
-	across the diodes is $V_{D_k}$. But since we know that $V_{D_k} >
-	\Vmin$, it must be the case that some $D_i$ with $V_{D_i} = \Vmin$ is also
-	on. However, if $D_i$ is on, then the voltage across the diodes is $V_{D_i}
-	< V_{D_k}$, and therefore $D_k$ cannot be on. We have reached a
-	contradiction, and therefore only diodes $D_I$ with $V_{D_i} = \Vmin$ can
-	be on.
-	\label{lemma:smallest_diode}
-\end{proof}
-
-Now, the proof for the sorting algorithm is simple,
-
-\begin{theorem}
-	Algorithm \ref{alg:sort} correctly sorts diodes $D_1, D_2, \dots, D_n$ from
-	smallest to greatest threshold voltage $V_{D_i}$.
-\end{theorem}
-\begin{proof}
-	Once we have built our circuit, since $V = \Vmax$, we know at least one
-	diode is turned on, as long as $\exists S_i$ that is on.
-	For the diodes that are on, or have $I(A_i) > 0$, they will only be the
-	diodes that are on, and these diodes, by Lemma \ref{lemma:smallest_diode},
-	are the ones with the smallest threshold voltage in the set of diodes.
-
-	Now, we can show this sorting algorithm works.
-
-	\begin{itemize}
-		\item Initially, the queue $Q$ is empty, so it is trivially sorted
-		\item On an arbitrary iteration with $Q$ sorted, we only add diodes
-		with $V_{D_i}$ the smallest in the set of remaining diodes with their switch on.
-		When we add these diodes to the queue, $V_{D_i}$ must be larger than the
-		previous diode $V_{D_j}$ added, since when $D_j$ was added, $D_i$ was not on.
-		Therefore, $Q$ remains sorted in each iteration.
-		\item On the last iteration, we are left with diodes that have a larger threshold voltage than all diodes currently in $Q$,
-		so adding these last diodes to $Q$ still keeps $Q$ sorted.
-	\end{itemize}
-\end{proof}
-
-\subsubsection{Complexity}
-
-\begin{theorem}
-	Algorithm \ref{alg:sort} runs in $O(n)$ time and uses $O(n)$ space.
-\end{theorem}
-
-\begin{proof}
-	Building the circuit takes 1 operation for putting the voltage source, and $3n$ operations for
-	attaching the switch, ammeter, and diode in parallel.
-
-	This circuit contains
-	\begin{equation}
-		1 + 3n  = 3n + 1 \in O(n)
-	\end{equation}
-	components, so it is $O(n)$ space.
-
-	Then, to run the algorithm, we are just turning off $S_i$ one by one, $n$
-	times, and each time adding $V_{D_i}$ to our queue, which is a total of 2
-	operations.
-
-	Therefore, the total number of operations is
-	\begin{equation}
-		1 + 3n + 2n = 5n+1 \in O(n).
-	\end{equation}
-\end{proof}
-
-Notice that although the complexity is $O(n)$, which matches radix sort,
-the constant $kn \in O(n)$ is for a $k \approx 2$, which outperforms radix sort.
-
-\subsection{Shortest Path}
-A natural extension to the sorting circuit is to create graphs out of diodes,
-and then look for shortest paths.
-
-The shortest path problem on a weighted graph is given a graph, what is the shortest path from $V_i$ to $V_j$.
-Finding the shortest path between every pair of vertices can be solved with the Floyd-Warshall algorithm in $O(\abs{V}^3)$ time, with $O(\abs{V}^2)$ space complexity.
-
-We will present a circuit that uses $O(\abs{V})$ space complexity, along with an algorithm that runs in $O(\abs{V}^2)$ time.
-
-\subsubsection{Circuit}
-
-To construct the circuit, given a graph $G=(V, E)$,
-
-\begin{lstlisting}
-	BUILD_DIODE_GRAPH($G=(V, E)$):
-		Normalize $G$ so that there are no negative weights, producing $G'=(V, E')$
-
-		For $e_i = (V_j, V_k, w_i) \in E'$:
-			Add $A_i, D_i$ between $V_j$, $V_k$ such that $V_{D_i} = w_i$
-\end{lstlisting}
-
-For example, with the following graph, we can construct the corresponding diode graph as follows:
-\begin{figure}[H]
-	\centering
-	\def\scaleGraph{1.75}
-  \subfloat[Original graph]{
-		\begin{tikzpicture}
-			\node[draw, circle] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
-			\node[draw, circle] (v2) at (0, 0) {$V_2$};
-			\node[draw, circle] (v3) at (2*\scaleGraph, 0) {$V_3$};
-			\node[draw, circle] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
-			\draw (v1) edge[-Latex] node[above] {$-2$} (v3);
-			\draw (v2) edge[-Latex] node[above] {$4$} (v1);
-			\draw (v2) edge[-Latex] node[above] {$3$} (v3);
-			\draw (v3) edge[-Latex] node[above] {$2$} (v4);
-			\draw (v4) edge[-Latex] node[above] {$-1$} (v2);
-		\end{tikzpicture}
-	}\hfill
-  \subfloat[Normalized graph]{
-		\begin{tikzpicture}
-			\node[draw, circle] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
-			\node[draw, circle] (v2) at (0, 0) {$V_2$};
-			\node[draw, circle] (v3) at (2*\scaleGraph, 0) {$V_3$};
-			\node[draw, circle] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
-			\draw (v1) edge[-Latex] node[above] {$0$} (v3);
-			\draw (v2) edge[-Latex] node[above] {$6$} (v1);
-			\draw (v2) edge[-Latex] node[above] {$5$} (v3);
-			\draw (v3) edge[-Latex] node[above] {$4$} (v4);
-			\draw (v4) edge[-Latex] node[above] {$1$} (v2);
-		\end{tikzpicture}
-	}\hfill
-	\subfloat[Diode graph, ammeters $A_i$ are in series with $D_i$, but not shown to reduce clutter in the diagram]{
-		\begin{circuitikz}
-			\draw (v1) to[short] (v3);
-			\draw (v2) to[D*, l={$V_{D_1} \eq 6$}] (v1);
-			\draw (v2) to[D*, l={$V_{D_2} \eq 5$}] (v3);
-			\draw (v3) to[D*, l={$V_{D_3} \eq 4$}] (v4);
-			\draw (v4) to[D*, l={$V_{D_4} \eq 1$}] (v2);
-			\node[fill=white] (v1) at (\scaleGraph, \scaleGraph) {$V_1$};
-			\node[fill=white] (v2) at (0, 0) {$V_2$};
-			\node[fill=white] (v3) at (2*\scaleGraph, 0) {$V_3$};
-			\node[fill=white] (v4) at (\scaleGraph, -\scaleGraph) {$V_4$};
-		\end{circuitikz}
-	}
-\end{figure}
-
-\subsubsection{Algorithm}
-
-\begin{lstlisting}[label={alg:shortest_paths}]
-	SHORTEST_PATH_ALL_PAIRS(G):
-		BUILD_DIODE_GRAPH(G)
-
-		shortest_paths = {}
-		Set $V = \sum V_{D_k}$
-		For every pair of vertices $V_i, V_j$:
-			Put voltage source $V$ with the positive terminal at $V_i$ and negative terminal at $V_j$
-			The $I(A_k) > 0$ are the edges $e_k$ that are in the shortest path
-			Add this path to shortest_paths(i, j)
-\end{lstlisting}
-
-\begin{theorem}
-	Algorithm \ref{alg:shortest_paths} correctly finds the shortest path between every $V_i, V_j$.
-\end{theorem}
-\begin{proof}
-	There are a set of paths $P_k$ between $V_i, V_j$, in the form
-	\begin{equation}
-		P_k = \pbra{
-			D_{k_1}, D_{k_2}, \dots, D_{k_{n_k}}
-		}.
-		\label{eq:diode_paths}
-	\end{equation}
-	Using Property \ref{property:diode_series}, when diodes are in series,
-	their turn on voltage is just the sum of all of the diodes' turn on
-	voltages. So we can express the turn-on voltages for all of these $P_k$ paths as
-	\begin{equation}
-		V_{\text{turn on}_k} = \sum_{i=1}^{n_k} V_{D_{k_i}}
-	\end{equation}
-
-	Now, when we apply $\Vmax$ across $V_i, V_j$, the diode series with the
-	lowest turn-on voltage will turn on. Since diode turn on voltages
-	correspond to the edge lengths on the graph, the smallest turn-on voltage
-	path corresponds to the shortest path.
-
-	If there is no such diode series that turns on, then there is no path between $V_i, V_j$.
-
-	Therefore, in every iteration we are finding the shortest path between $V_i, V_j$.
-\end{proof}
-
-\subsubsection{Complexity}
-\begin{theorem}
-	Algorithm \ref{alg:shortest_paths} runs in $O(\abs{V}^2)$ time and uses $O(\abs{V} + \abs{E})$ space complexity.
-\end{theorem}
-\begin{proof}
-	We can find the time and space complexity of the algorithm by considering
-	the construction and the path searching.
-
-	\textbf{Construction.} To normalize the weights of $G$, we just have to add
-	the minimum edge weight in $G$ to all of the edges, which takes $\abs{E}$
-	operations.
-
-	Then, to build the graph, we have to connect
-	\begin{itemize}
-		\item $\abs{E}$ diodes
-		\item $\abs{E}$ ammeters
-		\item $\abs{E}$ ammeters with wires to the device reading the ammeter
-		\item $\abs{V}$ junctions
-	\end{itemize}
-
-	Therefore, construction takes
-	\begin{equation}
-		\abs{E} + 3\abs{E} + \abs{V} \in O(\abs{V} + \abs{E})
-		\label{eq:construction_complexity}
-	\end{equation}
-	time and space complexity.
-
-	\textbf{Path search.} Once we have our graph, in order to find all shortest
-	paths, all we have to do is apply $\Vmax$ across every node pair $V_i,
-	V_j$. Every application of this max voltage will instantly reveal the
-	shortest path, i.e. $O(1)$ path search. To find every shortest path, we
-	just have to apply this max voltage $\abs{V} \cdot (\abs{V}-1)$ times,
-	corresponding to the number of $V_i, V_j$ pairs where order matters, but $i
-	\neq j$.
-
-	This will take
-	\begin{equation}
-		\abs{V}(\abs{V} - 1) \in O(\abs{V}^2)
-		\label{eq:search_complexity}
-	\end{equation}
-	time.
-
-	Therefore, combining Equations (\ref{eq:construction_complexity},
-	\ref{eq:search_complexity}), we see that Algorithm \ref{alg:shortest_paths}
-	runs in $O(\abs{V}^2)$ time and uses $O(\abs{V} + \abs{E})$ space
-	complexity.
-\end{proof}
+\input{sections/definitions}
+\input{sections/circuits}
 
 \section{Real-Life Implementations of Circuits}
+\label{sec:real_life}
 
 To demonstrate that these ideas can work in practice, I built these circuits
 in real life and tested them out.
 
-Comparison to existing CPUs.
+I only tested small graphs and weights, meaning my $\Vmax \leq \SI{10}{\volt}$ in all cases.
+
+I tested correctness of my algorithm on a sorting problem with $n=5$, and on a graph with $6$ nodes\footnote{I would really want to post videos of these circuits, but I no longer have them, and would like some funding before attempting to build larger scale circuits}.
+
+For further research, I should compare the efficiency of my circuits to library functions.
+Since I am using breadboard circuits and hobby-shop components, it may be hard to produce a fair comparison to the very-optimized layout of a CPU, but nonetheless, it would be interesting to see the asymptotic behavior of the algorithm to see if the above analysis are actually correct.
+Furthermore, it's quite cumbersome to have to create new circuit topologies for every variation of a problem, so there is definitely improvement on building some sort of circuit layout that maybe more generalizable and modular to support a variety of sorting or graph problems easily.
 
 \section{Discussion}
 
-How do we get diodes of arbitrary threshold voltage?
-This is unlikely, and can vastly limit the scopes of the problems we'd like
-to solve.
+The biggest question regarding the practicality of the circuits in this paper are about the diodes and physical properties.
 
-Physical limitations with electrons traveling through a wire. We have been
-modeling electron travel through wire as instantaneous, which technically
+\begin{question}
+  Do real diodes behave close enough to ideal for the results in this paper to hold?
+\end{question}
+
+Although in Section \ref{sec:real_life} I wasn't able to provide a lot of evidence, especially for larger scales, the exponential $I-V$ curve for diodes likely makes the properties in this paper good enough to hold in real life.
+The only adjustment is that because a diode is no longer exactly ``off'' anymore before reaching $V_D$, meaning the diode will probably still allow some current through, instead of measuring $I(A_i) < 0$ to determine if a certain diode is on or not, we may instead have to check $I(A_i) < \epsilon$, but this is not a big deal.
+
+\begin{question}
+  How do we get diodes of arbitrary threshold voltage?
+\end{question}
+
+This is probably the biggest issue with the circuit design in this paper. While I wasn't able to find much about very large turn-on voltage diodes, as it's unlikely anybody would ever need a $\SI{100000}{\volt}$ diode, we are likely to believe that a diode with $\VD$ will likely require $O(\VD)$ resources to construct.
+However, if this is not the case, then the circuits in this paper have some profound implications.
+
+\begin{question}
+  What are some of the physical limitations of these circuits, with regard to electrical signal and the speed of light?
+\end{question}
+
+Physical limitations include how the electrons travel through wires and in the circuit.
+We have been modeling electron travel through wire as instantaneous, which technically
 isn't true by physics, since the electrons will move in the wire at the speed
 of light. Because we have finite speed, we should consider the size of the
 circuits being built, as they can have an asymptotic complexity effect on
-their computational efficiency.
+their computational efficiency. However, even with this consideration, we can see that our circuits are all no bigger than the input size, so our time and space complexities are unaffected, even with this electron speed limitation.
 
-\subsection{Other Problem}
-What other problems can we solve with this idea?
-The idea of this paper is to show that certain ``intuitive'' circuit
-topologies can solve problems faster than we might using a Turing computation
-model, where we represent our problems in a particular data structure, and
-perform operations on this data structure representation.
+\subsection{Other Problems to Consider}
 
-Can we do ray tracing?
+While I have presented 2 natural problems to solve with these diodes, we beg the question of what other problems can we solve with this superparallel diode comparison idea?
 
+There are some properties of the superparallel comparison that give some interesting properties. For example, if we had a complete binary tree with weights on their edges, and we wanted to know the shortest path from the root to any leaf node, it would normally be a very difficult problem to do with traditional computation, but with superparallel comparison, we can just apply $\Vmax$ to the root and attach all the leaf nodes together, and be able to find that shortest path among $2^n$ very fast.
+Obviously there are the costs of translating the input into the diode way of representing the problem, but the fast comparison seems to at least lessen the burden of comparing many numerical quantities to each other one by one.
+
+Maybe we only really are able to gain time efficiencies on the order of $O(\log n), O(n)$, but depending on the application, that could be a very significant improvement.
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}

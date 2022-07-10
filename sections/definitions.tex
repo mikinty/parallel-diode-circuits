@@ -1,0 +1,86 @@
+\section{Definitions}
+
+\begin{definition}
+  An \textbf{ideal diode} is a circuit element that has infinite current when
+  on, and 0 current when off. The threshold voltage\footnote{we sometimes call this the ``turn-on voltage''} for when it is on and off
+  is called $\VD$ and is measured from the $+$ to the $-$ terminal.
+
+  \begin{figure}[H]
+    \centering
+    \begin{circuitikz}
+      \draw (0, 0) node[above] {$+$} to[D*]
+      (2, 0) node[above] {$-$};
+    \end{circuitikz}
+    \caption{A diode, with the positive and negative terminals marked.}
+  \end{figure}
+\end{definition}
+
+\begin{property}
+  For a chain of diodes $D_1, D_2, \dots, D_n$ in series, the turn on voltage for the
+  chain is
+  \begin{equation}
+    V_D = \sum_{i=1}^n V_{D_i}
+  \end{equation}
+  \begin{figure}[H]
+    \centering
+    \begin{circuitikz}
+      \draw (0, 0)  to[D*, l=$D_1$]
+      (2, 0) to[D*, l=$D_2$]
+      (4, 0)
+      (4.5, 0) node[] {$\cdots$}
+      (5, 0) to[D*, l=$D_n$] (7,0)
+      ;
+
+      \draw[decoration={brace,mirror},decorate]
+      (7,1) -- node[above=6pt] {$\sum V_{D_i}$} (0,1)
+      ;
+    \end{circuitikz}
+    \caption{Diode chain}
+  \end{figure}
+  \label{property:diode_series}
+\end{property}
+
+\begin{definition}
+  A \textbf{voltage source} is a circuit element that maintains a voltage of
+  $V$ between 2 nodes.
+
+  In this paper, we will be using the following element to represent a voltage source.
+  \begin{figure}[H]
+    \centering
+    \begin{circuitikz}
+      \draw (0, 0) to[american voltage source, l=$\SI{5}{\volt}$] (2, 0);
+    \end{circuitikz}
+    \caption{A voltage source of $\SI{5}{\volt}$}
+  \end{figure}
+\end{definition}
+
+\begin{definition}
+  An \textbf{ammeter} is a device used to measure the current at some node of a circuit.
+  We will use the notation
+  \begin{equation}
+    I(A_i)
+  \end{equation}
+  to describe the current measured by ammeter $A_i$.
+
+  \begin{figure}[H]
+    \centering
+    \begin{circuitikz}
+      \draw (0, 0) to[ammeter] (2, 0);
+    \end{circuitikz}
+    \caption{An ammeter}
+  \end{figure}
+\end{definition}
+
+\begin{definition}
+  A \textbf{switch} is a device that can be set to 2 configurations, either
+  closed, which behaves as a wire in a circuit, or open, which will behave as
+  an open circuit, so no current can flow through.
+  \begin{figure}[H]
+    \centering
+    \begin{circuitikz}
+      \draw (0, 0) to[nos] (2, 0);
+      \draw (3, 0) to[ncs] (5, 0);
+    \end{circuitikz}
+    \caption{An open switch (left) and a closed switch (right)}
+  \end{figure}
+\end{definition}
