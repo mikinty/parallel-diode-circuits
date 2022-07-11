@@ -9,6 +9,12 @@ However, the cost of producing diodes with large weights is potentially an expon
 
 [Find it here](build/main.pdf).
 
+## Issues
+
+- The explanation for how the lowest turn-on voltage diode turns on in parallel is not well-explained. 
+  - We can do a pretty trivial solution by saying that we sweep the voltage source between 0 and $V_{\text{max}}$, and this is technically constant time for fixed input size (i.e. fixed $V_\text{max}$), but that seems cheap
+  - I think better, is to do something where we use the exponential current property of the diode, and show that if there is some $|v - v'| > \delta$, then the current of the lower turn on voltage diode will be significantly larger than the other one, meaning it will be the only one that's "on"
+
 ## TODO
 
 - Think about if ray tracing is possible to do faster
